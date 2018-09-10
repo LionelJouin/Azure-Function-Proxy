@@ -1,31 +1,63 @@
-﻿using System.IO;
+﻿using System.Net.Http;
+using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Logging;
-using Newtonsoft.Json;
+using Microsoft.Azure.WebJobs.Host;
 
 namespace Azure_Function_Proxy
 {
     public static class WebProxy
     {
 
-        // https://github.com/JeremyLikness/serverless-url-shortener
-        [FunctionName("WebProxy")]
-        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequest req, ILogger log)
+        public struct HttpResponse
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            public HttpResponseMessage ResponseMessage;
+            public string Content;
+        }
 
-            string name = req.Query["name"];
+        [FunctionName("WebProxy")]
+        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequest req, TraceWriter log)
+        {
+            var url = req.Query["url"].ToString();
 
-            var requestBody = new StreamReader(req.Body).ReadToEnd();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
-            name = name ?? data?.name;
+            if (url == "")
+                return new BadRequestObjectResult("Please pass an url on the query string");
 
-            return name != null
-                ? (ActionResult)new OkObjectResult($"Hello, {name}")
-                : new BadRequestObjectResult("Please pass a name on the query string or in the request body");
+            var t = Task.Run(() => RequestHandler(url));
+            t.Wait();
+
+            return CreateResponse(t.Result);
+        }
+
+        public static ContentResult CreateResponse(HttpResponse httpResponse)
+        {
+            return new ContentResult()
+            {
+                Content = httpResponse.Content,
+                StatusCode = (int)httpResponse.ResponseMessage.StatusCode,
+                ContentType = httpResponse.ResponseMessage.Content.Headers.ContentType.ToString(),
+            };
+        }
+
+        public static async Task<HttpResponse> RequestHandler(string url)
+        {
+            using (var client = new HttpClient())
+            {
+                using (var response = await client.GetAsync(url))
+                {
+                    using (var content = response.Content)
+                    {
+                        var responseContent = await content.ReadAsStringAsync();
+                        return new HttpResponse()
+                        {
+                            ResponseMessage = response,
+                            Content = responseContent
+                        };
+                    }
+                }
+            }
         }
 
     }
