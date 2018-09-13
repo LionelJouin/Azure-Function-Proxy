@@ -2,10 +2,6 @@
 
 Simple serverless implementation of a web proxy for [Azure Functions](https://jlik.me/6a). This function provides you an intermediary to access websites.
 
-## Quick Deploy to Azure
-
-[![Deploy to Azure](http://azuredeploy.net/deploybutton.png)](https://azuredeploy.net/)
-
 ## Usage
 
 To use this azure function, you only have to pass an url as parameter. The function will return you the page.
