@@ -18,7 +18,7 @@ namespace Azure_Function_Proxy
         }
 
         [FunctionName("WebProxy")]
-        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)]HttpRequest req, TraceWriter log)
+        public static IActionResult Run([HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)]HttpRequest req, TraceWriter log)
         {
             var url = req.Query["url"].ToString();
 
